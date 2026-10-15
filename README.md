@@ -5,7 +5,7 @@
 
 ## Live Interactive Dashboard
 The live interactive web map portal can be accessed directly at:
-https://github.io
+[https://owensylvia.github.io/streetlight-map/](https://owensylvia.github.io/streetlight-map/)
 
 *Note: For optimal functionality, view this portal on a desktop or tablet web browser. Users can pan, zoom, and select individual assets to inspect the embedded attribute tracking data.*
 
