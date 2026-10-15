@@ -58,7 +58,8 @@ The final step involved converting the localized QGIS workspace into an open-sou
 ### Tabular Spreadsheet Source to Spatial GIS Point Geometry
 Below is the visualization of the data transformation process, illustrating the migration from raw tabular rows to fully mapped point features integrated onto the Santa Barbara aerial satellite network.
 
-![Tabular Spreadsheet to Spatial Map Comparison](PATH_TO_YOUR_SCREENSHOT.png)
+![Tabular Spreadsheet to Spatial Map Comparison](![Streetlight Image Map](imagemap.png)
+)
 *(To update this image: Upload your screenshot to your GitHub repository, copy its file path, and replace `PATH_TO_YOUR_SCREENSHOT.png` with your actual file name.)*
 
 ---
