@@ -14,9 +14,6 @@
     .legend-item{display:flex;align-items:center;gap:8px;margin:4px 0}
     .swatch-point{width:12px;height:12px;border-radius:50%;border:2px solid currentColor;box-sizing:border-box}
     .swatch-line{width:18px;height:0;border-top:3px solid currentColor}
-    .swatch-poly{width:14px;height:12px;border:2px solid currentColor;background:rgba(0,0,0,.08)}
-    .label{background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.3);border-radius:3px;padding:1px 4px;white-space:nowrap;font-size:12px}
-    .label-num{background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.45);border-radius:10px;padding:0 6px;line-height:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:12px}
   </style>
 </head>
 <body>
@@ -30,46 +27,16 @@
     </div>
   </div>
   <script>
-    (function(){function T(){this.items=[]}T.prototype.insert=function(x){this.items.push(x)};T.prototype.search=function(b){return this.items.filter(function(i){return !(i.maxX<b.minX||i.minX>b.maxX||i.maxY<b.minY||i.minY>b.maxY)})};T.prototype.remove=function(v,fn){for(var i=0;i<this.items.length;i++){if(fn?fn(v,this.items[i]):this.items[i]===v){this.items.splice(i,1);return}}};self.RBush=T})();
-    (function(){function E(){this.tree=new RBush();this.labels={}}E.prototype.addLabel=function(el,box,id){this.labels[id]={el:el,box:{minX:box.minX,minY:box.minY,maxX:box.maxX,maxY:box.maxY,id:id}};this.tree.insert(this.labels[id].box)};E.prototype._hide=function(id){var x=this.labels[id];if(x)x.el.style.display='none'};E.prototype._show=function(id){var x=this.labels[id];if(x)x.el.style.display=''};E.prototype.reset=function(){for(var k in this.labels)this._show(k)};E.prototype.render=function(ids){this.reset();for(var i=0;i<ids.length;i++){var id=ids[i],o=this.labels[id];if(!o)continue;this.tree.remove(o.box,function(a,b){return a.id===b.id});var hit=this.tree.search(o.box).some(function(h){return h.id!==id});this.tree.insert(o.box);if(hit)this._hide(id);else this._show(id)}};self.Labelgun=E})();
-
-    // Initialize map on Santa Barbara area coordinates
+    // Initialize Map explicitly centered on Santa Barbara coordinates from your QGIS workspace
     const map = L.map('map', {zoomControl:true, attributionControl:true}).setView([34.3964, -119.7559], 13);
-    const layerControl = L.control.layers({}, null, {collapsed:false}).addTo(map);
 
-    // Standard map background provider
-    const baseMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Mount standard open-source background canvas tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
     }).addTo(map);
-    layerControl.addBaseLayer(baseMap, "OpenStreetMap");
 
-    // Dynamic Style Mappings
-    const LAYERS = [
-      {"name": "circuits", "type": "line", "color": "#f3a6b2", "weight": 3, "opacity": 1.0},
-      {
-        "name": "streetlights_mapped",
-        "type": "point",
-        "style": function(f){
-          var props = f.properties || {};
-          var status = props.Status || props.status;
-          var fillColor = "#22c55e"; // Active
-          
-          if (status === "Abandoned") fillColor = "#0000ff";
-          else if (status === "Needs Repair") fillColor = "#ffff00";
-          else if (status === "Out-of-Service") fillColor = "#ff00ff";
-          
-          return {
-            fillColor: fillColor,
-            color: "#1f2937",
-            radius: 6,
-            fillOpacity: 0.9,
-            weight: 1.5
-          };
-        }
-      }
-    ];
-
+    // Symbology Legend configuration mapping
     const LEGEND = [
       {"name": "circuits", "type": "line", "color": "#f3a6b2"},
       {"name": "Abandoned", "type": "point", "color": "#0000ff"},
@@ -78,133 +45,25 @@
       {"name": "Out-of-Service", "type": "point", "color": "#ff00ff"}
     ];
 
-    const FIT_BOUNDS = null;
-    const LABELS_SUFFIX = " (Labels)";
-
-    // Append items to bottom HTML layout legend container
+    // Build legend markers inside layout container dynamically
     (function(){
-      const el=document.getElementById('legend');
-      LEGEND.forEach(function(item){
-        const row=document.createElement('div');
-        row.className='legend-item';
-        const sw=document.createElement('span');
-        sw.style.color=item.color||'#3388ff';
-        if(item.type==='point') sw.className='swatch-point';
-        else if(item.type==='line') sw.className='swatch-line';
-        else {
-          sw.className='swatch-poly';
-          sw.style.background=item.fill||item.color||'#3388ff';
-          sw.style.opacity='0.25';
-        }
-        const name=document.createElement('span');
-        name.textContent=item.name;
-        row.appendChild(sw);
-        row.appendChild(name);
-        el.appendChild(row);
-      });
+      const el = document.getElementById('legend');
+      if(el) {
+        LEGEND.forEach(function(item){
+          const row = document.createElement('div');
+          row.className = 'legend-item';
+          const sw = document.createElement('span');
+          sw.style.color = item.color;
+          if(item.type==='point') sw.className = 'swatch-point';
+          else if(item.type==='line') sw.className = 'swatch-line';
+          const name = document.createElement('span');
+          name.textContent = item.name;
+          row.appendChild(sw);
+          row.appendChild(name);
+          el.appendChild(row);
+        });
+      }
     })();
-
-    function styleFrom(st, feature){
-      if(st.type==='line') return {color:st.color,weight:st.weight||3,opacity:(st.opacity ?? 0.9)};
-      if(st.type==='point') return typeof st.style === 'function' ? st.style(feature) : {color:st.color,weight:st.weight||2,opacity:(st.opacity ?? 0.9),fillColor:st.fillColor||st.color,fillOpacity:(st.fillOpacity ?? 0.85),radius:st.radius||6};
-      return null;
-    }
-
-    function pointToLayerFrom(st, feature, latlng){
-      var dynamicStyle = typeof st.style === 'function' ? st.style(feature) : {};
-      return L.circleMarker(latlng,{
-        radius: dynamicStyle.radius || st.radius || 6,
-        color: dynamicStyle.color || st.color || '#1f2937',
-        weight: dynamicStyle.weight || 1.5,
-        opacity: (st.opacity ?? 1),
-        fillColor: dynamicStyle.fillColor || st.fillColor || st.color || '#22c55e',
-        fillOpacity: dynamicStyle.fillOpacity || (st.fillOpacity ?? 0.9)
-      });
-    }
-
-    function mercatorToWgs84(x,y){
-      const lon = (x / 20037508.34) * 180.0;
-      let lat = (y / 20037508.34) * 180.0;
-      lat = 180 / Math.PI * (2 * Math.atan(Math.exp(lat * Math.PI / 180.0)) - Math.PI / 2);
-      return [lon, lat];
-    }
-
-    function normalizeCoords(coords){
-      if(!Array.isArray(coords)) return coords;
-      if(typeof coords[0] === 'number' && typeof coords[1] === 'number'){
-        const x = coords[0], y = coords[1];
-        if(Math.abs(x) > 180 || Math.abs(y) > 90){
-          return mercatorToWgs84(x, y);
-        }
-        return coords;
-      }
-      return coords.map(normalizeCoords);
-    }
-
-    function normalizeGeoJSON(gj){
-      if(!gj || !gj.features) return gj;
-      gj.features.forEach(function(f){
-        if(f.geometry && f.geometry.coordinates){
-          f.geometry.coordinates = normalizeCoords(f.geometry.coordinates);
-        }
-        if(f.properties && f.properties._labelPoint){
-          const p = f.properties._labelPoint;
-          if(Array.isArray(p) && p.length >= 2 && (Math.abs(p[0]) > 180 || Math.abs(p[1]) > 90)){
-            f.properties._labelPoint = mercatorToWgs84(p[0], p[1]);
-          }
-        }
-      });
-      return gj;
-    }
-
-    function manualBoundsFromGeoJSON(gj){
-      let minLat=90,minLng=180,maxLat=-90,maxLng=-180;
-      function visit(c){
-        if(!c) return;
-        if(typeof c[0]==='number' && typeof c[1]==='number'){
-          const lng=c[0], lat=c[1];
-          if(lat<minLat) minLat=lat;
-          if(lng<minLng) minLng=lng;
-          if(lat>maxLat) maxLat=lat;
-          if(lng>maxLng) maxLng=lng;
-        } else if(Array.isArray(c)) c.forEach(visit);
-      }
-      try {
-        (gj.features||[]).forEach(function(f){ visit(f.geometry && f.geometry.coordinates); });
-      } catch(e) {}
-      if(minLat<=maxLat && minLng<=maxLng) return L.latLngBounds([minLat,minLng],[maxLat,maxLng]);
-      return null;
-    }
-
-    function escHtml(s){
-      const d=document.createElement('div');
-      d.appendChild(document.createTextNode(String(s)));
-      return d.innerHTML;
-    }
-
-    function buildPopup(feature, layer, popupFields, fieldAliases, fieldOrder){
-      const props=feature.properties||{};
-      const aliases=fieldAliases||{};
-      let keys;
-      if(popupFields && popupFields.length){
-        keys = popupFields;
-      } else if(fieldOrder && fieldOrder.length){
-        keys = fieldOrder.filter(function(k){ return k in props; });
-      } else {
-        keys = Object.keys(props).filter(function(k){ return k.charAt(0)!=='_'; });
-      }
-      let rows='';
-      keys.forEach(function(k){
-        if(k.charAt(0)==='_') return;
-        const v=props[k];
-        if(v!==null&&v!==undefined){
-          const label=aliases[k]||k;
-          rows+='<tr><td style="padding:2px 10px 2px 0;font-weight:bold;white-space:nowrap">'+escHtml(label)+'</td>'
-            +'<td style="padding:2px 0">'+escHtml(v)+'</td></tr>';
-        }
-      });
-      return rows ? '<table style="margin:0;padding:0;border-collapse:collapse;font-family:system-ui,-apple-system,sans-serif;font-size:12px">' + rows + '</table>' : '';
-    }
   </script>
 </body>
 </html>
