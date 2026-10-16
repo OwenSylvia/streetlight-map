@@ -33,6 +33,17 @@
     (function(){function T(){this.items=[]}T.prototype.insert=function(x){this.items.push(x)};T.prototype.search=function(b){return this.items.filter(function(i){return !(i.maxX<b.minX||i.minX>b.maxX||i.maxY<b.minY||i.minY>b.maxY)})};T.prototype.remove=function(v,fn){for(var i=0;i<this.items.length;i++){if(fn?fn(v,this.items[i]):this.items[i]===v){this.items.splice(i,1);return}}};self.RBush=T})();
     (function(){function E(){this.tree=new RBush();this.labels={}}E.prototype.addLabel=function(el,box,id){this.labels[id]={el:el,box:{minX:box.minX,minY:box.minY,maxX:box.maxX,maxY:box.maxY,id:id}};this.tree.insert(this.labels[id].box)};E.prototype._hide=function(id){var x=this.labels[id];if(x)x.el.style.display='none'};E.prototype._show=function(id){var x=this.labels[id];if(x)x.el.style.display=''};E.prototype.reset=function(){for(var k in this.labels)this._show(k)};E.prototype.render=function(ids){this.reset();for(var i=0;i<ids.length;i++){var id=ids[i],o=this.labels[id];if(!o)continue;this.tree.remove(o.box,function(a,b){return a.id===b.id});var hit=this.tree.search(o.box).some(function(h){return h.id!==id});this.tree.insert(o.box);if(hit)this._hide(id);else this._show(id)}};self.Labelgun=E})();
 
+    // Initialize Map centered on Santa Barbara coordinates from QGIS project
+    const map = L.map('map', {zoomControl:true, attributionControl:true}).setView([34.3964, -119.7559], 13);
+    const layerControl = L.control.layers({}, null, {collapsed:false}).addTo(map);
+
+    // Default open-source base layer map tile fallback (OpenStreetMap Standard)
+    const baseMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    layerControl.addBaseLayer(baseMap, "OpenStreetMap");
+
     // Styled Dynamic Pipeline Overrides
     const LAYERS = [
       {"name": "circuits", "type": "line", "color": "#f3a6b2", "weight": 3, "opacity": 1.0},
@@ -40,7 +51,8 @@
         "name": "streetlights_mapped",
         "type": "point",
         "style": function(f){
-          var status = f.properties.Status || f.properties.status;
+          var props = f.properties || {};
+          var status = props.Status || props.status;
           var fillColor = "#22c55e"; // Default to Active green
           
           if (status === "Abandoned") {
@@ -54,13 +66,12 @@
           return {
             fillColor: fillColor,
             color: "#1f2937",
-            radius: 8,
+            radius: 6,
             fillOpacity: 0.9,
             weight: 1.5
           };
         }
-      },
-      {"name": "Google Satellite", "type": "tile"}
+      }
     ];
 
     const LEGEND = [
@@ -68,18 +79,13 @@
       {"name": "Abandoned", "type": "point", "color": "#0000ff"},
       {"name": "Active", "type": "point", "color": "#22c55e"},
       {"name": "Needs Repair", "type": "point", "color": "#ffff00"},
-      {"name": "Out-of-Service", "type": "point", "color": "#ff00ff"},
-      {"name": "Google Satellite", "type": "tile", "color": "#666666"}
+      {"name": "Out-of-Service", "type": "point", "color": "#ff00ff"}
     ];
 
     const FIT_BOUNDS = null;
     const LABELS_SUFFIX = " (Labels)";
-    const map = L.map('map', {zoomControl:true, attributionControl:false});
-    if (map.attributionControl) {
-      try { map.attributionControl.remove(); } catch(e) {}
-    }
-    const layerControl = L.control.layers({}, null, {collapsed:false}).addTo(map);
 
+    // Render HTML Legend Elements
     (function(){
       const el=document.getElementById('legend');
       LEGEND.forEach(function(item){
@@ -89,11 +95,7 @@
         sw.style.color=item.color||'#3388ff';
         if(item.type==='point') sw.className='swatch-point';
         else if(item.type==='line') sw.className='swatch-line';
-        else if(item.type==='raster' || item.type==='tile') {
-          sw.className='swatch-poly';
-          sw.style.background='linear-gradient(45deg,#999,#ddd)';
-          sw.style.opacity='1';
-        } else {
+        else {
           sw.className='swatch-poly';
           sw.style.background=item.fill||item.color||'#3388ff';
           sw.style.opacity='0.25';
@@ -106,6 +108,7 @@
       });
     })();
 
+    // Helper functions for layer mapping pipelines
     function styleFrom(st, feature){
       if(st.type==='line') return {color:st.color,weight:st.weight||3,opacity:(st.opacity ?? 0.9)};
       if(st.type==='point') return typeof st.style === 'function' ? st.style(feature) : {color:st.color,weight:st.weight||2,opacity:(st.opacity ?? 0.9),fillColor:st.fillColor||st.color,fillOpacity:(st.fillOpacity ?? 0.85),radius:st.radius||6};
@@ -115,12 +118,12 @@
     function pointToLayerFrom(st, feature, latlng){
       var dynamicStyle = typeof st.style === 'function' ? st.style(feature) : {};
       return L.circleMarker(latlng,{
-        radius: dynamicStyle.radius || st.radius || 7,
+        radius: dynamicStyle.radius || st.radius || 6,
         color: dynamicStyle.color || st.color || '#1f2937',
         weight: dynamicStyle.weight || 1.5,
         opacity: (st.opacity ?? 1),
-        fillColor: dynamicStyle.fillColor || st.fillColor || st.color || '#cc3333',
-        fillOpacity: dynamicStyle.fillOpacity || (st.fillOpacity ?? 0.8)
+        fillColor: dynamicStyle.fillColor || st.fillColor || st.color || '#22c55e',
+        fillOpacity: dynamicStyle.fillOpacity || (st.fillOpacity ?? 0.9)
       });
     }
 
@@ -205,8 +208,3 @@
             +'<td style="padding:2px 0">'+escHtml(v)+'</td></tr>';
         }
       });
-      return rows ? '<table style="margin:0;padding:0;border-collapse:collapse;font-family:system-ui,-apple-system,sans-serif;font-size:12px">' + rows + '</table>' : '';
-    }
-  </script>
-</body>
-</html>
