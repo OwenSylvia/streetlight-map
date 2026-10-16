@@ -1,5 +1,5 @@
 # Municipal Infrastructure Asset Management Dashboard
-### A Geospatial Infrastructure Study & Financial Backlog Analysis of Santa Barbara, CA
+### A Geospatial Infrastructure Study & Financial Backlog Analysis of Streetlights in Santa Barbara, CA
 
 ---
 
